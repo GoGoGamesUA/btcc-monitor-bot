@@ -1,15 +1,44 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from telegram import Bot
 import time
+import os
 
-TOKEN = "7606448862:AAF_OflE2SAIbUXH9MkmxtLq0qURJwCvZE4"
-CHAT_ID = 1012742695
+TOKEN = os.getenv("TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+URL = "https://swap.bitcoincode.technology/#/overview"
+CHROME_PATH = "./chromedriver.exe"
 
 bot = Bot(token=TOKEN)
 
-def send_message(text):
-    bot.send_message(chat_id=CHAT_ID, text=text)
+def get_btcc_price():
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+
+    service = Service(CHROME_PATH)
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.get(URL)
+
+    time.sleep(5)
+
+    try:
+        price_element = driver.find_element(By.XPATH, "//div[contains(text(),'BTCC Price')]/following-sibling::div")
+        price = price_element.text.strip()
+    except Exception as e:
+        price = "❌ Помилка при парсингу"
+        print("Error:", e)
+
+    driver.quit()
+    return price
+
+def send_price():
+    price = get_btcc_price()
+    bot.send_message(chat_id=CHAT_ID, text=f"📊 Поточна ціна BTCC: {price}")
 
 if __name__ == "__main__":
     while True:
-        send_message("👋 Привіт, це Танішка 😘")
-        time.sleep(3600)  # надсилати щогодини
+        send_price()
+        time.sleep(300)
