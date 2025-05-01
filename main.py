@@ -15,17 +15,18 @@ def get_btcc_price():
         "User-Agent": "Mozilla/5.0"
     }
 
-    response = requests.get("https://swap.bitcoincode.technology", headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
-
     try:
-        price_element = soup.find("div", string="BTCC Price")
-        if price_element:
-            parent = price_element.find_parent()
-            price = parent.find_all("div")[1].text.strip()
-            return price
+        response = requests.get(URL, headers=headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Знаходимо перший <span>, який містить ціну з "$"
+        price_span = soup.find("span", string=lambda text: text and "$" in text)
+
+        if price_span:
+            return price_span.text.strip()
         else:
             return "❌ Ціну не знайдено"
+
     except Exception as e:
         print("Error:", e)
         return "❌ Помилка при парсингу"
