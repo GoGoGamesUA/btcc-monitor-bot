@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: btcc-monitor
+    runtime: python
+    buildCommand: ""
+    startCommand: "python main.py"
+    plan: free
