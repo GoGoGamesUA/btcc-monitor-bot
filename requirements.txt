@@ -1,2 +1,3 @@
-python-telegram-bot==20.7
-selenium==4.15.2
+requests
+beautifulsoup4
+python-telegram-bot==13.15
