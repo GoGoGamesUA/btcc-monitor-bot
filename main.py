@@ -12,21 +12,21 @@ bot = Bot(token=TOKEN)
 
 def get_btcc_price():
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        'User-Agent': 'Mozilla/5.0'
     }
-
     try:
         response = requests.get(URL, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Знаходимо перший <span>, який містить ціну з "$"
-        price_span = soup.find("span", string=lambda text: text and "$" in text)
+        # Шукаємо блок з назвою "BTCC Price"
+        label_div = soup.find('div', string=lambda s: s and 'BTCC Price' in s)
+        if label_div:
+            # Беремо наступний <span> після нього
+            price_span = label_div.find_next('span')
+            if price_span:
+                return price_span.text.strip()
 
-        if price_span:
-            return price_span.text.strip()
-        else:
-            return "❌ Ціну не знайдено"
-
+        return "❌ Ціну не знайдено"
     except Exception as e:
         print("Error:", e)
         return "❌ Помилка при парсингу"
