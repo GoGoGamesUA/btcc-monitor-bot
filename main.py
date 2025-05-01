@@ -15,19 +15,17 @@ def get_btcc_price():
         headers = {
             "User-Agent": "Mozilla/5.0"
         }
-        response = requests.get(URL, headers=headers)
+        response = requests.get("https://swap.bitcoincode.technology/#/overview", headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Знаходимо span, який містить "$" і цифри — це точний селектор
-        price_element = soup.find("span", string=lambda text: text and "$" in text and any(char.isdigit() for char in text))
-
-        if price_element:
-            return price_element.text.strip()
+        # Знаходимо span з точною назвою класу
+        price_tag = soup.find("span", class_="sc-fyjhYU jGQVVX")
+        if price_tag:
+            return price_tag.get_text(strip=True)
         else:
             return "❌ Ціну не знайдено"
     except Exception as e:
-        print("Error:", e)
-        return "❌ Помилка при парсингу"
+        return f"❌ Помилка: {e}"
 
 def send_price():
     price = get_btcc_price()
