@@ -1,11 +1,11 @@
 import requests
 from telegram import Bot
-import time
 import os
+import time
 
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-ADDRESS = "0xb39115d0b712753614a726897f0e74Bd2518f34"
+ADDRESS = "0x3B9115d0b712753614a726879F0e74Bd2518f34"  # адреса з активними свапами
 
 bot = Bot(token=TOKEN)
 
@@ -16,34 +16,36 @@ def get_btcc_price():
             "module": "account",
             "action": "txlist",
             "address": ADDRESS,
-            "sort": "desc"
+            "sort": "desc",
+            "page": 1,
+            "offset": 25
         }
 
         response = requests.get(url, params=params)
         data = response.json()
 
-        # Перевірка на успішність
-        if data.get("status") != "1" or "result" not in data or not data["result"]:
-            return "❌ Поточна ціна BTCC: Транзакції не знайдено"
+        if "result" not in data or not data["result"]:
+            return "❌ Поточна ціна BTCC: Транзакцій не знайдено"
 
-        # Проходимось по транзакціях, знаходимо першу з value > 0
+        # Проходимо по транзакціях і шукаємо SwapTokensForExactETH з value > 0
         for tx in data["result"]:
-            if tx.get("isError") == "0" and tx.get("value") and int(tx["value"]) > 0:
-                value_wei = int(tx["value"])
-                value_btcc = value_wei / 1e18
-                return f"{value_btcc:.8f} BTCC"
+            method = tx.get("functionName", "")
+            value = int(tx.get("value", "0"))
 
-        return "❌ Поточна ціна BTCC: Немає валідних транзакцій"
+            if "SwapTokensForExactETH" in method and value > 0:
+                btcc = value / 10**18
+                return f"📉 Поточна ціна BTCC: {btcc:.8f} BTCC"
 
+        return "❌ Поточна ціна BTCC: Немає актуальних обмінів"
     except Exception as e:
-        return f"❌ Поточна ціна BTCC: Помилка — {str(e)}"
+        return f"❌ Помилка: {str(e)}"
 
 def send_price():
     price = get_btcc_price()
-    bot.send_message(chat_id=CHAT_ID, text=f"📊 {price}")
+    bot.send_message(chat_id=CHAT_ID, text=price)
 
 if __name__ == "__main__":
-    bot.send_message(chat_id=CHAT_ID, text="🧠 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌸")
+    bot.send_message(chat_id=CHAT_ID, text="🔍 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌺")
     while True:
         send_price()
-        time.sleep(300)
+        time.sleep(30)
