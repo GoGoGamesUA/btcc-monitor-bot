@@ -1,29 +1,43 @@
 import requests
-from bs4 import BeautifulSoup
 from telegram import Bot
 import time
 import os
 
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-URL = "https://swap.bitcoincode.technology/#/overview"
-
+GRAPHQL_URL = "https://scan.bitcoincode.technology/graphql"
 bot = Bot(token=TOKEN)
 
 def get_btcc_price():
-    try:
-        headers = {
-            "User-Agent": "Mozilla/5.0"
+    query = """
+    {
+      transactions(first: 10, orderBy: timestamp, orderDirection: desc) {
+        method
+        tokenTransfers {
+          tokenSymbol
+          amount
         }
-        response = requests.get("https://swap.bitcoincode.technology/#/overview", headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
+      }
+    }
+    """
+    try:
+        response = requests.post(GRAPHQL_URL, json={"query": query})
+        data = response.json()
 
-        # Знаходимо span з точною назвою класу
-        price_tag = soup.find("span", class_="sc-fyjhYU jGQVVX")
-        if price_tag:
-            return price_tag.get_text(strip=True)
-        else:
-            return "❌ Ціну не знайдено"
+        for tx in data["data"]["transactions"]:
+            if "SwapTokensForExactETH" in tx["method"]:
+                transfers = tx["tokenTransfers"]
+                btcc = None
+                eth = None
+                for t in transfers:
+                    if t["tokenSymbol"] == "BTCC":
+                        btcc = float(t["amount"])
+                    elif t["tokenSymbol"] == "ETH":
+                        eth = float(t["amount"])
+                if btcc and eth:
+                    price = eth / btcc
+                    return f"{price:.6f} ETH"
+        return "❌ Ціну не знайдено"
     except Exception as e:
         return f"❌ Помилка: {e}"
 
@@ -32,7 +46,7 @@ def send_price():
     bot.send_message(chat_id=CHAT_ID, text=f"📊 Поточна ціна BTCC: {price}")
 
 if __name__ == "__main__":
-    bot.send_message(chat_id=CHAT_ID, text="🔍 Ціна BTCC під контролем. Танішка не спить 😎")
+    bot.send_message(chat_id=CHAT_ID, text="🔍 GraphQL API активний — Танішка спостерігає за ринком BTCC 🧠")
     while True:
         send_price()
         time.sleep(300)
