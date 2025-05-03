@@ -40,4 +40,4 @@ if __name__ == "__main__":
     bot.send_message(chat_id=CHAT_ID, text="🔍 API активний — Танішка стежить за BTCC 💞")
     while True:
         send_price()
-        time.sleep(60)
+        time.sleep(6000000)
