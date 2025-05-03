@@ -5,7 +5,7 @@ import os
 
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-ADDRESS = "0xb39115d0b712753614a726897f0e74Bd2518f34"  # активна адреса з Explorer
+ADDRESS = "0xb39115d0b712753614a726897f0e74Bd2518f34"
 
 bot = Bot(token=TOKEN)
 
@@ -22,24 +22,28 @@ def get_btcc_price():
         response = requests.get(url, params=params)
         data = response.json()
 
-        if "result" not in data or not data["result"]:
-            return "❌ GraphQL: транзакції не знайдено"
+        # Перевірка на успішність
+        if data.get("status") != "1" or "result" not in data or not data["result"]:
+            return "❌ Поточна ціна BTCC: Транзакції не знайдено"
 
-        last_tx = data["result"][0]
-        value = int(last_tx["value"])
-        btcc_amount = value / 1e18  # токени в форматі wei
+        # Проходимось по транзакціях, знаходимо першу з value > 0
+        for tx in data["result"]:
+            if tx.get("isError") == "0" and tx.get("value") and int(tx["value"]) > 0:
+                value_wei = int(tx["value"])
+                value_btcc = value_wei / 1e18
+                return f"{value_btcc:.8f} BTCC"
 
-        return f"{btcc_amount:.8f} BTCC"
+        return "❌ Поточна ціна BTCC: Немає валідних транзакцій"
 
     except Exception as e:
-        return f"❌ Помилка: {str(e)}"
+        return f"❌ Поточна ціна BTCC: Помилка — {str(e)}"
 
 def send_price():
     price = get_btcc_price()
-    bot.send_message(chat_id=CHAT_ID, text=f"📊 Поточна ціна BTCC: {price}")
+    bot.send_message(chat_id=CHAT_ID, text=f"📊 {price}")
 
 if __name__ == "__main__":
-    bot.send_message(chat_id=CHAT_ID, text="🧠 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌺")
+    bot.send_message(chat_id=CHAT_ID, text="🧠 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌸")
     while True:
         send_price()
         time.sleep(300)
