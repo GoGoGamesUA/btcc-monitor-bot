@@ -5,57 +5,41 @@ import os
 
 TOKEN = os.getenv("TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-GRAPHQL_URL = "https://scan.bitcoincode.technology/graphql"
+ADDRESS = "0xb39115d0b712753614a726897f0e74Bd2518f34"  # активна адреса з Explorer
 
 bot = Bot(token=TOKEN)
 
 def get_btcc_price():
-    query = """
-    {
-      transactions(first: 10, orderBy: timestamp, orderDirection: desc) {
-        method
-        tokenTransfers {
-          tokenSymbol
-          amount
-        }
-      }
-    }
-    """
     try:
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(GRAPHQL_URL, json={"query": query}, headers=headers)
+        url = "https://scan.bitcoincode.technology/api"
+        params = {
+            "module": "account",
+            "action": "txlist",
+            "address": ADDRESS,
+            "sort": "desc"
+        }
 
-        # Перевірка, чи сервер взагалі відповів
-        if response.status_code != 200:
-            return f"❌ GraphQL помилка: HTTP {response.status_code}"
-
+        response = requests.get(url, params=params)
         data = response.json()
 
-        # Перевірка, чи в JSON є блок "data"
-        if "data" not in data or "transactions" not in data["data"]:
-            return "❌ GraphQL відповідь неправильна"
+        if "result" not in data or not data["result"]:
+            return "❌ GraphQL: транзакції не знайдено"
 
-        for tx in data["data"]["transactions"]:
-            if "SwapTokensForExactETH" in tx.get("method", ""):
-                btcc = eth = None
-                for t in tx.get("tokenTransfers", []):
-                    if t["tokenSymbol"] == "BTCC":
-                        btcc = float(t["amount"])
-                    elif t["tokenSymbol"] == "ETH":
-                        eth = float(t["amount"])
-                if btcc and eth:
-                    price = eth / btcc
-                    return f"{price:.6f} ETH"
-        return "❌ Ціну не знайдено у свопах"
+        last_tx = data["result"][0]
+        value = int(last_tx["value"])
+        btcc_amount = value / 1e18  # токени в форматі wei
+
+        return f"{btcc_amount:.8f} BTCC"
+
     except Exception as e:
-        return f"❌ Помилка: {e}"
+        return f"❌ Помилка: {str(e)}"
 
 def send_price():
     price = get_btcc_price()
     bot.send_message(chat_id=CHAT_ID, text=f"📊 Поточна ціна BTCC: {price}")
 
 if __name__ == "__main__":
-    bot.send_message(chat_id=CHAT_ID, text="🔍 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌸")
+    bot.send_message(chat_id=CHAT_ID, text="🧠 GraphQL API активний — Танішка спостерігає за ринком BTCC 🌺")
     while True:
         send_price()
-        time.sleep(300)  # Кожні 5 хвилин
+        time.sleep(300)
